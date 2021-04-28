@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import scipy.io as sio
 from .read_openpose import read_openpose
+import subprocess
 
 def hr_lspet_extract(dataset_path, openpose_path, out_path):
 
@@ -21,6 +22,16 @@ def hr_lspet_extract(dataset_path, openpose_path, out_path):
     annot_file = os.path.join(dataset_path, 'joints.mat')
     joints = sio.loadmat(annot_file)['joints']
 
+    json_path = os.path.join(openpose_path, 'hrlspet')
+    if not os.path.isdir(json_path):
+        sub_path = ''
+        os.makedirs(json_path, exist_ok=True)
+        subprocess.run(
+            "python /ssd2/swheo/dev/HumanRecon/Preprocessing/run_openpose.py --GPU_ID {0} --input_path {1} --write_json {2} --no_display {3}".format(
+                str(1),
+                os.path.join(dataset_path, sub_path),
+                os.path.join(json_path),
+                True).split(' '))
     # main loop
     for i, imgname in enumerate(imgs):
         # image name
@@ -35,6 +46,7 @@ def hr_lspet_extract(dataset_path, openpose_path, out_path):
         # update keypoints
         part = np.zeros([24,3])
         part[:14] = np.hstack([part14, np.ones([14,1])])
+
         # read openpose detections
         json_file = os.path.join(openpose_path, 'hrlspet',
             imgname.replace('.png', '_keypoints.json'))

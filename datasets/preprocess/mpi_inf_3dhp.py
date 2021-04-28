@@ -9,6 +9,8 @@ import scipy.io as sio
 import scipy.misc
 from .read_openpose import read_openpose
 
+import subprocess
+
 def read_calibration(calib_file, vid_list):
     Ks, Rs, Ts = [], [], []
     file = open(calib_file, 'r')
@@ -27,7 +29,21 @@ def read_calibration(calib_file, vid_list):
     
 def train_data(dataset_path, openpose_path, out_path, joints_idx, scaleFactor, extract_img=False, fits_3d=None):
 
+    # mpi_inf_joint names
+    names = ['spine3', 'spine4', 'spine2', 'spine', 'pelvis',
+             'neck', 'head', 'head_top', 'left_clavicle', 'left_shoulder', 'left_elbow',
+             'left_wrist', 'left_hand', 'right_clavicle', 'right_shoulder', 'right_elbow', 'right_wrist',
+             'right_hand', 'left_hip', 'left_knee', 'left_ankle', 'left_foot', 'left_toe',
+             'right_hip', 'right_knee', 'right_ankle', 'right_foot', 'right_toe']
+
+    # 17 Joints for groundtruth "3D pose", each index is matached to its corresponding opnepose joint
+    # pelvis, left_hip, left_knee, left_ankle, right_hip, right_knee, right_ankle, spine, neck, head,
+    # head_top,left_shoulder, left_elbow, left_wrist, right_shoulder, right_elbow, right_wrist
+    # It coresspond to 3D Joints
+    # Note. This indices will be placed with respect to predefined joint indices by joints_idx in input
+    # (GT superset part of JOINT_NAMES of constants.py)
     joints17_idx = [4, 18, 19, 20, 23, 24, 25, 3, 5, 6, 7, 9, 10, 11, 14, 15, 16]
+
 
     h, w = 2048, 2048
     imgnames_, scales_, centers_ = [], [], []
@@ -45,6 +61,7 @@ def train_data(dataset_path, openpose_path, out_path, joints_idx, scaleFactor, e
             seq_path = os.path.join(dataset_path,
                                     'S' + str(user_i),
                                     'Seq' + str(seq_i))
+            print("process : " + seq_path)
             # mat file with annotations
             annot_file = os.path.join(seq_path, 'annot.mat')
             annot2 = sio.loadmat(annot_file)['annot2']
@@ -54,7 +71,11 @@ def train_data(dataset_path, openpose_path, out_path, joints_idx, scaleFactor, e
             Ks, Rs, Ts = read_calibration(calib_file, vid_list)
 
             for j, vid_i in enumerate(vid_list):
-
+                sub_path = os.path.join('S' + str(user_i), 'Seq' + str(seq_i), 'imageFrames', 'video_' + str(vid_i))
+                json_path = os.path.join(openpose_path, 'mpi_inf_3dhp', sub_path)
+                if os.path.isdir(json_path):
+                    print("json path exist : "+json_path)
+                    continue
                 # image folder
                 imgs_path = os.path.join(seq_path,    
                                          'imageFrames',
@@ -91,6 +112,13 @@ def train_data(dataset_path, openpose_path, out_path, joints_idx, scaleFactor, e
                 cam_aa = cv2.Rodrigues(Rs[j])[0].T[0]
                 pattern = os.path.join(imgs_path, '*.jpg')
                 img_list = glob.glob(pattern)
+                os.makedirs(json_path, exist_ok=True)
+                subprocess.run(
+                    "python /ssd2/swheo/dev/HumanRecon/Preprocessing/run_openpose.py --GPU_ID {0} --input_path {1} --write_json {2} --no_display {3}".format(
+                        str(0),
+                        os.path.join(dataset_path, sub_path),
+                        os.path.join(openpose_path, 'mpi_inf_3dhp', sub_path),
+                        True).split(' '))
                 for i, img_i in enumerate(img_list):
 
                     # for each image we store the relevant annotations
@@ -101,8 +129,9 @@ def train_data(dataset_path, openpose_path, out_path, joints_idx, scaleFactor, e
                                             'video_' + str(vid_i),
                                             img_name)
                     joints = np.reshape(annot2[vid_i][0][i], (28, 2))[joints17_idx]
+                    # Fix units : mm -> meter
                     S17 = np.reshape(annot3[vid_i][0][i], (28, 3))/1000
-                    S17 = S17[joints17_idx] - S17[4] # 4 is the root
+                    S17 = S17[joints17_idx] - S17[4] # 4 is the root (pelvis)
                     bbox = [min(joints[:,0]), min(joints[:,1]),
                             max(joints[:,0]), max(joints[:,1])]
                     center = [(bbox[2]+bbox[0])/2, (bbox[3]+bbox[1])/2]

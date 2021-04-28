@@ -3,10 +3,16 @@ from os.path import join
 import argparse
 import numpy as np
 import scipy.io as sio
+import subprocess
 from .read_openpose import read_openpose
 
 def lsp_dataset_original_extract(dataset_path, openpose_path, out_path):
-
+    """
+    Annotation order
+    0 - Right ankle, 1 - Right knee, 2 - Right hip, 3 - Left hip, 4 - Left knee, 5 - Left ankle,
+    6 - Right wrist, 7 - Right elbow, 8 - Right shoulder, 9 - Left shoulder, 10 - Left elbow,
+    11 - Left wrist, 12 - Neck, 13 - Head top
+    """
     # bbox expansion factor
     scaleFactor = 1.2
 
@@ -20,6 +26,16 @@ def lsp_dataset_original_extract(dataset_path, openpose_path, out_path):
     annot_file = os.path.join(dataset_path, 'joints.mat')
     joints = sio.loadmat(annot_file)['joints']
 
+    json_path = os.path.join(openpose_path, 'lsp')
+    if not os.path.isdir(json_path):
+        sub_path = 'images'
+        os.makedirs(json_path, exist_ok=True)
+        subprocess.run(
+            "python /ssd2/swheo/dev/HumanRecon/Preprocessing/run_openpose.py --GPU_ID {0} --input_path {1} --write_json {2} --no_display {3}".format(
+                str(1),
+                os.path.join(dataset_path, sub_path),
+                os.path.join(json_path),
+                True).split(' '))
     # go over all the images
     for img_i in imgs:
         # image name
@@ -35,17 +51,19 @@ def lsp_dataset_original_extract(dataset_path, openpose_path, out_path):
         # update keypoints
         part = np.zeros([24,3])
         part[:14] = np.hstack([part14, np.ones([14,1])])
+
         # read openpose detections
         json_file = os.path.join(openpose_path, 'lsp',
             imgname.replace('.jpg', '_keypoints.json'))
         openpose = read_openpose(json_file, part, 'lsp')
-        
+
         # store data
         imgnames_.append(imgname_full)
         centers_.append(center)
         scales_.append(scale)
         parts_.append(part)
         openposes_.append(openpose)
+
 
     # store the data struct
     if not os.path.isdir(out_path):

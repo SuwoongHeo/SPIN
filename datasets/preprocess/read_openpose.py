@@ -2,6 +2,11 @@ import numpy as np
 import json
 
 def read_openpose(json_file, gt_part, dataset):
+    """
+    Convert gt-part to openpose-compatible annotations
+    Find keyp25 from openpose and find correspondence btw dataset annotation and openpose detection
+    If the found person p_sel has get through the dist_conf test, it will be our gt 2d keypoint
+    """
     # get only the arms/legs joints
     op_to_12 = [11, 10, 9, 12, 13, 14, 4, 3, 2, 5, 6, 7]
     # read the openpose detection

@@ -10,40 +10,62 @@ class TrainOptions():
         self.parser = argparse.ArgumentParser()
 
         req = self.parser.add_argument_group('Required')
+        # Never used
         req.add_argument('--name', required=True, help='Name of the experiment')
 
         gen = self.parser.add_argument_group('General')
+        # utils/base_trainer.py, for computing self.endtime
         gen.add_argument('--time_to_run', type=int, default=np.inf, help='Total time to run in seconds. Used for training in environments with timing constraints')
+        # utils/base_trainer.py, self.options.resume for resuming from checkpoint
         gen.add_argument('--resume', dest='resume', default=False, action='store_true', help='Resume from checkpoint (Use latest checkpoint by default')
+        # utils/data_loader.py, initialize dataloader
         gen.add_argument('--num_workers', type=int, default=8, help='Number of processes used for data loading')
+
+        # Only use one of argument (e.g., --pin_memory or --no_pin_memory)
         pin = gen.add_mutually_exclusive_group()
+        # utils/data_loader.py, initialize dataloader
         pin.add_argument('--pin_memory', dest='pin_memory', action='store_true')
         pin.add_argument('--no_pin_memory', dest='pin_memory', action='store_false')
         gen.set_defaults(pin_memory=True)
 
         io = self.parser.add_argument_group('io')
+        # utils/train_options.py self.args.log_dir for lighting summaries
         io.add_argument('--log_dir', default='logs', help='Directory to store logs')
         io.add_argument('--checkpoint', default=None, help='Path to checkpoint')
+        # utils/train_options.py, path_to_json for loading config.json
         io.add_argument('--from_json', default=None, help='Load options from json file instead of the command line')
+        # train/trainer.py, self.options.pretrained_checkpoint
         io.add_argument('--pretrained_checkpoint', default=None, help='Load a pretrained checkpoint at the beginning training') 
 
         train = self.parser.add_argument_group('Training Options')
+        # utils/base_trainer.py, self.options.num_epochs
         train.add_argument('--num_epochs', type=int, default=50, help='Total number of training epochs')
+        # train/trainer.py, self.options.lr for initializing Adam optimizer
         train.add_argument("--lr", type=float, default=5e-5, help="Learning rate")
+        # train/trainer.py, self.options.batch_size
         train.add_argument('--batch_size', type=int, default=64, help='Batch size')
+        # utils/base_trainer.py, self.options.summary_steps
         train.add_argument('--summary_steps', type=int, default=100, help='Summary saving frequency')
+        # utils/base_trainer.py, self.options.test_steps
         train.add_argument('--test_steps', type=int, default=1000, help='Testing frequency during training')
+        # utils/base_trainer.py, self.options.checkpoint_steps
         train.add_argument('--checkpoint_steps', type=int, default=10000, help='Checkpoint saving frequency')
-        train.add_argument('--img_res', type=int, default=224, help='Rescale bounding boxes to size [img_res, img_res] before feeding them in the network') 
-        train.add_argument('--rot_factor', type=float, default=30, help='Random rotation in the range [-rot_factor, rot_factor]') 
-        train.add_argument('--noise_factor', type=float, default=0.4, help='Randomly multiply pixel values with factor in the range [1-noise_factor, 1+noise_factor]') 
-        train.add_argument('--scale_factor', type=float, default=0.25, help='Rescale bounding boxes by a factor of [1-scale_factor,1+scale_factor]') 
-        train.add_argument('--ignore_3d', default=False, action='store_true', help='Ignore GT 3D data (for unpaired experiments') 
+        # train/trainer.py, self.options.img_res, for Renderer class
+        train.add_argument('--img_res', type=int, default=224, help='Rescale bounding boxes to size [img_res, img_res] before feeding them in the network')
+        # datasets/base_dataset.py, self.options.rot_factor
+        train.add_argument('--rot_factor', type=float, default=30, help='Random rotation in the range [-rot_factor, rot_factor]')
+        # datasets/base_dataset.py, self.options.noise_factor
+        train.add_argument('--noise_factor', type=float, default=0.4, help='Randomly multiply pixel values with factor in the range [1-noise_factor, 1+noise_factor]')
+        # datasets/base_dataset.py, self.options.noise_factor
+        train.add_argument('--scale_factor', type=float, default=0.25, help='Rescale bounding boxes by a factor of [1-scale_factor,1+scale_factor]')
+        # train/trainer.py, self.options.ignore_3d, for init_fn
+        train.add_argument('--ignore_3d', default=False, action='store_true', help='Ignore GT 3D data (for unpaired experiments')
+        # train/trainer.py, def train_step
         train.add_argument('--shape_loss_weight', default=0, type=float, help='Weight of per-vertex loss') 
         train.add_argument('--keypoint_loss_weight', default=5., type=float, help='Weight of 2D and 3D keypoint loss') 
         train.add_argument('--pose_loss_weight', default=1., type=float, help='Weight of SMPL pose loss') 
-        train.add_argument('--beta_loss_weight', default=0.001, type=float, help='Weight of SMPL betas loss') 
-        train.add_argument('--openpose_train_weight', default=0., help='Weight for OpenPose keypoints during training') 
+        train.add_argument('--beta_loss_weight', default=0.001, type=float, help='Weight of SMPL betas loss')
+        train.add_argument('--openpose_train_weight', default=0., help='Weight for OpenPose keypoints during training')
         train.add_argument('--gt_train_weight', default=1., help='Weight for GT keypoints during training') 
         train.add_argument('--run_smplify', default=False, action='store_true', help='Run SMPLify during training') 
         train.add_argument('--smplify_threshold', type=float, default=100., help='Threshold for ignoring SMPLify fits during training') 
@@ -74,6 +96,7 @@ class TrainOptions():
             if not os.path.exists(self.args.checkpoint_dir):
                 os.makedirs(self.args.checkpoint_dir)
             self.save_dump()
+
             return self.args
 
     def save_dump(self):

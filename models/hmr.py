@@ -49,7 +49,7 @@ class Bottleneck(nn.Module):
 class HMR(nn.Module):
     """ SMPL Iterative Regressor with ResNet50 backbone
     """
-
+    # Input "block" is usually Bottleneck layer
     def __init__(self, block, layers, smpl_mean_params):
         self.inplanes = 64
         super(HMR, self).__init__()

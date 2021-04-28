@@ -4,6 +4,7 @@ import sys
 import json
 import numpy as np
 from .read_openpose import read_openpose
+import subprocess
 
 def coco_extract(dataset_path, openpose_path, out_path):
 
@@ -25,6 +26,17 @@ def coco_extract(dataset_path, openpose_path, out_path):
     imgs = {}
     for img in json_data['images']:
         imgs[img['id']] = img
+
+    json_path = os.path.join(openpose_path, 'coco')
+    if not os.path.isdir(json_path):
+        sub_path = 'train2014/'
+        os.makedirs(json_path, exist_ok=True)
+        subprocess.run(
+            "python /ssd2/swheo/dev/HumanRecon/Preprocessing/run_openpose.py --GPU_ID {0} --input_path {1} --write_json {2} --no_display {3}".format(
+                str(3),
+                os.path.join(dataset_path, sub_path),
+                os.path.join(json_path),
+                True).split(' '))
 
     for annot in json_data['annotations']:
         # keypoints processing

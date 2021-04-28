@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-import numpy as np
+# import numpy as np
 from torchgeometry import angle_axis_to_rotation_matrix, rotation_matrix_to_angle_axis
-import cv2
+# import cv2
 
 from datasets import MixedDataset
 from models import hmr, SMPL
@@ -114,8 +114,8 @@ class Trainer(BaseTrainer):
         gt_pose = input_batch['pose'] # SMPL pose parameters
         gt_betas = input_batch['betas'] # SMPL beta parameters
         gt_joints = input_batch['pose_3d'] # 3D pose
-        has_smpl = input_batch['has_smpl'].byte() # flag that indicates whether SMPL parameters are valid
-        has_pose_3d = input_batch['has_pose_3d'].byte() # flag that indicates whether 3D pose is valid
+        has_smpl = input_batch['has_smpl'].bool() # flag that indicates whether SMPL parameters are valid
+        has_pose_3d = input_batch['has_pose_3d'].bool() # flag that indicates whether 3D pose is valid
         is_flipped = input_batch['is_flipped'] # flag that indicates whether image was flipped during data augmentation
         rot_angle = input_batch['rot_angle'] # rotation angle used for data augmentation
         dataset_name = input_batch['dataset_name'] # name of the dataset the image comes from
@@ -222,7 +222,7 @@ class Trainer(BaseTrainer):
         opt_betas[has_smpl, :] = gt_betas[has_smpl, :]
 
         # Assert whether a fit is valid by comparing the joint loss with the threshold
-        valid_fit = (opt_joint_loss < self.options.smplify_threshold).to(self.device)
+        valid_fit = ((opt_joint_loss < self.options.smplify_threshold).type(torch.bool)).to(self.device)
         # Add the examples with GT parameters to the list of valid fits
         valid_fit = valid_fit | has_smpl
 
@@ -290,7 +290,8 @@ class Trainer(BaseTrainer):
         opt_cam_t = output['opt_cam_t']
         images_pred = self.renderer.visualize_tb(pred_vertices, pred_cam_t, images)
         images_opt = self.renderer.visualize_tb(opt_vertices, opt_cam_t, images)
-        self.summary_writer.add_image('pred_shape', images_pred, self.step_count)
-        self.summary_writer.add_image('opt_shape', images_opt, self.step_count)
+        # self.summary_writer.add_image('pred_shape', images_pred, self.step_count)
+        # self.summary_writer.add_image('opt_shape', images_opt, self.step_count)
+        self.summary_writer.add_image('Input/SPIN/Simplify', torch.cat([images_pred, images_opt[:,:,224:]], 2), self.step_count)
         for loss_name, val in losses.items():
             self.summary_writer.add_scalar(loss_name, val, self.step_count)

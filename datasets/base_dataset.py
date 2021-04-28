@@ -179,13 +179,14 @@ class BaseDataset(Dataset):
 
         # Get augmentation parameters
         flip, pn, rot, sc = self.augm_params()
-        
+        # pn - per channel pixel-noise
+
         # Load image
         imgname = join(self.img_dir, self.imgname[index])
         try:
             img = cv2.imread(imgname)[:,:,::-1].copy().astype(np.float32)
         except TypeError:
-            print(imgname)
+            print("typeErr from imgname: "+imgname)
         orig_shape = np.array(img.shape)[:2]
 
         # Get SMPL parameters, if available

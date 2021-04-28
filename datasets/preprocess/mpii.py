@@ -3,10 +3,16 @@ from os.path import join
 import h5py
 import numpy as np
 from .read_openpose import read_openpose
+import subprocess
 
 def mpii_extract(dataset_path, openpose_path, out_path):
 
-    # convert joints to global order
+    # Original order
+    # (0 - r ankle, 1 - r knee, 2 - r hip, 3 - l hip,
+    # 4 - l knee, 5 - l ankle, 6 - pelvis, 7 - thorax,
+    # 8 - upper neck, 9 - head top, 10 - r wrist,
+    # 11 - r elbow, 12 - r shoulder, 13 - l shoulder, 14 - l elbow, 15 - l wrist)
+    # convert joints to global order to
     joints_idx = [0, 1, 2, 3, 4, 5, 14, 15, 12, 13, 6, 7, 8, 9, 10, 11]
 
     # structs we use
@@ -19,6 +25,17 @@ def mpii_extract(dataset_path, openpose_path, out_path):
     f = h5py.File(annot_file, 'r')
     centers, imgnames, parts, scales = \
         f['center'], f['imgname'], f['part'], f['scale']
+
+    json_path = os.path.join(openpose_path, 'mpii')
+    if not os.path.isdir(json_path):
+        sub_path = 'images'
+        os.makedirs(json_path, exist_ok=True)
+        subprocess.run(
+            "python /ssd2/swheo/dev/HumanRecon/Preprocessing/run_openpose.py --GPU_ID {0} --input_path {1} --write_json {2} --no_display {3}".format(
+                str(1),
+                os.path.join(dataset_path, sub_path),
+                os.path.join(json_path),
+                True).split(' '))
 
     # go over all annotated examples
     for center, imgname, part16, scale in zip(centers, imgnames, parts, scales):
